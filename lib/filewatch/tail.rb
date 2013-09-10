@@ -171,28 +171,32 @@ module FileWatch
       changed = false
       loop do
         begin
-          data = @files[path].sysread(4096)
+          data = @files[path].sysread(16394)
           changed = true
           @buffers[path].extract(data).each do |line|
             yield(path, line)
           end
 
           @sincedb[@statcache[path]] = @files[path].pos
+          write_sincedb_if_necessary
         rescue Errno::EWOULDBLOCK, Errno::EINTR, EOFError
           break
         end
       end
 
-      if changed
-        now = Time.now.to_i
-        delta = now - @sincedb_last_write
-        if delta >= @opts[:sincedb_write_interval]
-          @logger.debug("writing sincedb (delta since last write = #{delta})")
-          _sincedb_write
-          @sincedb_last_write = now
-        end
-      end
+      write_sincedb_if_necessary
     end # def _read_file
+
+    private
+    def write_sincedb_if_necessary
+      now = Time.now.to_i
+      delta = now - @sincedb_last_write
+      if delta >= @opts[:sincedb_write_interval]
+        @logger.debug("writing sincedb (delta since last write = #{delta})")
+        _sincedb_write
+        @sincedb_last_write = now
+      end
+    end # def write_sincedb_if_necessary
 
     public
     def sincedb_write(reason=nil)
