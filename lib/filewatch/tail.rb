@@ -4,6 +4,8 @@ require "filewatch/winhelper"
 require "logger"
 require "rbconfig"
 
+include Java if defined? JRUBY_VERSION
+require "JRubyFileExtension.jar" if defined? JRUBY_VERSION
 
 module FileWatch
   class Tail
@@ -102,7 +104,11 @@ module FileWatch
     def _open_file(path, event)
       @logger.debug("_open_file: #{path}: opening")
       begin
-        @files[path] = File.open(path)
+        if @iswindows && defined? JRUBY_VERSION
+            @files[path] = Java::RubyFileExt::getRubyFile(path)
+        else
+            @files[path] = File.open(path)
+        end
       rescue
         # don't emit this message too often. if a file that we can't
         # read is changing a lot, we'll try to open it more often,
